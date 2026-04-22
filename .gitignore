@@ -73,3 +73,9 @@ data/db/
 # ========================
 # giữ lại nếu muốn reproducible install
 # package-lock.json
+# ========================
+# LOCAL DEV SCRIPTS
+# ========================
+Script/start-mongo.bat
+Script/start-redis.bat
+Script/start-infra.bat

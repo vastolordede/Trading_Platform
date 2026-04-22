@@ -7,7 +7,10 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "infra:start": "..\\Script\\start-infra.bat",
+    "dev:server": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "dev:full": "start cmd /k ..\\Script\\start-infra.bat && npm run dev:server"
   },
   "keywords": [],
   "author": "",
