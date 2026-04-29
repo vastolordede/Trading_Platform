@@ -79,3 +79,14 @@ data/db/
 Script/start-mongo.bat
 Script/start-redis.bat
 Script/start-infra.bat
+# ========================
+# LOCAL DEV SCRIPTS
+# ========================
+Script/
+*.cmd
+
+# ========================
+# LOCAL SERVICE LOGS
+# ========================
+backend/memurai-log.txt
+memurai-log.txt
