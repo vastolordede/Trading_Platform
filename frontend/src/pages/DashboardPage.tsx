@@ -1,18 +1,24 @@
 import { useMemo, useState } from "react";
 import CandleChart from "../components/chart/CandleChart";
+import SymbolSearch from "../components/trading/SymbolSearch";
 import { useMarket } from "../hooks/useMarket";
 
-const symbols = ["BTCUSDT", "ETHUSDT", "BNBUSDT"];
 const timeframes = ["1m", "3m", "5m", "15m", "30m", "1h", "4h", "1d"];
 
 export default function DashboardPage() {
   const [symbol, setSymbol] = useState<string>("BTCUSDT");
   const [timeframe, setTimeframe] = useState<string>("1h");
 
-  const { candles, currentPrice, loading, error, refetch } = useMarket(
-    symbol,
-    timeframe
-  );
+  const {
+    candles,
+    currentPrice,
+    loading,
+    loadingMore,
+    error,
+    refetch,
+    loadMoreCandles,
+    maxCandles,
+  } = useMarket(symbol, timeframe);
 
   const lastClose = useMemo(() => {
     if (!candles.length) return null;
@@ -33,18 +39,8 @@ export default function DashboardPage() {
         }}
       >
         <div>
-          <label htmlFor="symbol-select">Symbol </label>
-          <select
-            id="symbol-select"
-            value={symbol}
-            onChange={(e) => setSymbol(e.target.value)}
-          >
-            {symbols.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
+          <label>Symbol </label>
+          <SymbolSearch selectedSymbol={symbol} onSelectSymbol={setSymbol} />
         </div>
 
         <div>
@@ -122,11 +118,14 @@ export default function DashboardPage() {
           }}
         >
           <p style={{ margin: 0, color: "#6b7280" }}>Candles Loaded</p>
-          <h2 style={{ marginTop: "8px" }}>{candles.length}</h2>
+          <h2 style={{ marginTop: "8px" }}>
+            {candles.length}/{maxCandles}
+          </h2>
         </div>
       </div>
 
       {loading && <p>Loading market data...</p>}
+      {loadingMore && <p>Loading older candles...</p>}
       {error && <p style={{ color: "red" }}>{error}</p>}
 
       <div
@@ -140,7 +139,13 @@ export default function DashboardPage() {
         <h3 style={{ marginTop: 0, marginBottom: "16px" }}>
           Candlestick Chart - {symbol} / {timeframe}
         </h3>
-        <CandleChart data={candles} />
+
+        <CandleChart
+          data={candles}
+          symbol={symbol}
+          timeframe={timeframe}
+          onLoadMore={loadMoreCandles}
+        />
       </div>
     </div>
   );

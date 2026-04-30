@@ -4,6 +4,7 @@ import {
   CandleDTO,
   CurrentPriceDTO,
   GetCandlesParams,
+  MarketSymbolDTO,
   Timeframe,
 } from "./market.types";
 import { redisClient } from "../../config/redis";
@@ -13,6 +14,7 @@ const BINANCE_BASE_URL =
 
 const PRICE_CACHE_TTL_SECONDS = 10;
 const CANDLES_CACHE_TTL_SECONDS = 60;
+const SYMBOLS_CACHE_TTL_SECONDS = 60 * 60;
 
 const ALLOWED_TIMEFRAMES: Timeframe[] = [
   "1m",
@@ -28,7 +30,8 @@ const ALLOWED_TIMEFRAMES: Timeframe[] = [
 const DEFAULT_SYMBOL = "BTCUSDT";
 const DEFAULT_TIMEFRAME: Timeframe = "1h";
 const DEFAULT_LIMIT = 100;
-const MAX_LIMIT = 500;
+const MAX_LIMIT = 1000;
+const SYMBOLS_LIMIT = 90;
 
 const normalizeSymbol = (symbol?: string): string => {
   return (symbol || DEFAULT_SYMBOL).trim().toUpperCase();
@@ -93,13 +96,15 @@ const saveCandlesToMongo = async (candles: CandleDTO[]): Promise<void> => {
 const fetchCandlesFromBinance = async (
   symbol: string,
   timeframe: Timeframe,
-  limit: number
+  limit: number,
+  endTime?: number
 ): Promise<CandleDTO[]> => {
   const response = await axios.get(`${BINANCE_BASE_URL}/api/v3/klines`, {
     params: {
       symbol,
       interval: timeframe,
       limit,
+      ...(endTime ? { endTime } : {}),
     },
     timeout: 15000,
   });
@@ -121,32 +126,90 @@ const fetchCurrentPriceFromBinance = async (
   };
 };
 
+export const getMarketSymbolsService = async (): Promise<MarketSymbolDTO[]> => {
+  const cacheKey = `market:symbols:USDT:${SYMBOLS_LIMIT}`;
+
+  try {
+    const cached = await redisClient.get(cacheKey);
+
+    if (cached) {
+      console.log("CACHE HIT:", cacheKey);
+      return JSON.parse(cached) as MarketSymbolDTO[];
+    }
+
+    console.log("CACHE MISS:", cacheKey);
+  } catch (error) {
+    console.error("Redis read symbols error:", error);
+  }
+
+  const response = await axios.get(`${BINANCE_BASE_URL}/api/v3/exchangeInfo`, {
+    timeout: 15000,
+  });
+
+  const symbols = response.data.symbols
+    .filter((item: any) => {
+      return (
+        item.status === "TRADING" &&
+        item.quoteAsset === "USDT" &&
+        item.isSpotTradingAllowed === true
+      );
+    })
+    .map((item: any) => ({
+      symbol: String(item.symbol),
+      baseAsset: String(item.baseAsset),
+      quoteAsset: String(item.quoteAsset),
+      status: String(item.status),
+    }))
+    .sort((a: MarketSymbolDTO, b: MarketSymbolDTO) =>
+      a.symbol.localeCompare(b.symbol)
+    )
+    .slice(0, SYMBOLS_LIMIT);
+
+  try {
+    await redisClient.set(cacheKey, JSON.stringify(symbols), {
+      EX: SYMBOLS_CACHE_TTL_SECONDS,
+    });
+  } catch (error) {
+    console.error("Redis write symbols error:", error);
+  }
+
+  return symbols;
+};
+
 export const getCandlesService = async (
   params: GetCandlesParams
 ): Promise<CandleDTO[]> => {
   const symbol = normalizeSymbol(params.symbol);
   const timeframe = normalizeTimeframe(params.timeframe);
   const limit = normalizeLimit(params.limit);
+  const endTime = params.endTime ? Number(params.endTime) : undefined;
 
-  const cacheKey = `candles:${symbol}:${timeframe}:${limit}`;
-
-try {
-  const cached = await redisClient.get(cacheKey);
-
-  console.log("Checking cache:", cacheKey);
-
-  if (cached) {
-    console.log("CACHE HIT:", cacheKey);
-    return JSON.parse(cached) as CandleDTO[];
-  }
-
-  console.log("CACHE MISS:", cacheKey);
-} catch (error) {
-  console.error("Redis read candles error:", error);
-}
+  const cacheKey = endTime
+    ? `candles:${symbol}:${timeframe}:${limit}:end:${endTime}`
+    : `candles:${symbol}:${timeframe}:${limit}`;
 
   try {
-    const candles = await fetchCandlesFromBinance(symbol, timeframe, limit);
+    const cached = await redisClient.get(cacheKey);
+
+    console.log("Checking cache:", cacheKey);
+
+    if (cached) {
+      console.log("CACHE HIT:", cacheKey);
+      return JSON.parse(cached) as CandleDTO[];
+    }
+
+    console.log("CACHE MISS:", cacheKey);
+  } catch (error) {
+    console.error("Redis read candles error:", error);
+  }
+
+  try {
+    const candles = await fetchCandlesFromBinance(
+      symbol,
+      timeframe,
+      limit,
+      endTime
+    );
 
     await saveCandlesToMongo(candles);
 
@@ -162,7 +225,11 @@ try {
   } catch (apiError) {
     console.error("Fetch candles from API failed, fallback to Mongo:", apiError);
 
-    const candlesFromMongo = await CandleModel.find({ symbol, timeframe })
+    const mongoFilter = endTime
+      ? { symbol, timeframe, openTime: { $lt: endTime } }
+      : { symbol, timeframe };
+
+    const candlesFromMongo = await CandleModel.find(mongoFilter)
       .sort({ openTime: -1 })
       .limit(limit)
       .lean();
@@ -187,20 +254,20 @@ export const getCurrentPriceService = async (
   const symbol = normalizeSymbol(symbolInput);
   const cacheKey = `price:${symbol}`;
 
-try {
-  const cached = await redisClient.get(cacheKey);
+  try {
+    const cached = await redisClient.get(cacheKey);
 
-  console.log("Checking cache:", cacheKey);
+    console.log("Checking cache:", cacheKey);
 
-  if (cached) {
-    console.log("CACHE HIT:", cacheKey);
-    return JSON.parse(cached) as CurrentPriceDTO;
+    if (cached) {
+      console.log("CACHE HIT:", cacheKey);
+      return JSON.parse(cached) as CurrentPriceDTO;
+    }
+
+    console.log("CACHE MISS:", cacheKey);
+  } catch (error) {
+    console.error("Redis read price error:", error);
   }
-
-  console.log("CACHE MISS:", cacheKey);
-} catch (error) {
-  console.error("Redis read price error:", error);
-}
 
   const data = await fetchCurrentPriceFromBinance(symbol);
 
@@ -234,5 +301,4 @@ export const syncMarketDataService = async (): Promise<void> => {
       }
     }
   }
-  
 };

@@ -17,13 +17,26 @@ export interface CurrentPriceResponse {
   price: number;
 }
 
+export interface MarketSymbolResponse {
+  symbol: string;
+  baseAsset: string;
+  quoteAsset: string;
+  status: string;
+}
+
 export const getCandlesApi = async (
   symbol: string,
   timeframe: string,
-  limit = 100
+  limit = 100,
+  endTime?: number
 ): Promise<CandleResponseItem[]> => {
   const response = await api.get("/market/candles", {
-    params: { symbol, timeframe, limit },
+    params: {
+      symbol,
+      timeframe,
+      limit,
+      ...(endTime ? { endTime } : {}),
+    },
   });
 
   return response.data.data;
@@ -35,6 +48,12 @@ export const getCurrentPriceApi = async (
   const response = await api.get("/market/price", {
     params: { symbol },
   });
+
+  return response.data.data;
+};
+
+export const getMarketSymbolsApi = async (): Promise<MarketSymbolResponse[]> => {
+  const response = await api.get("/market/symbols");
 
   return response.data.data;
 };

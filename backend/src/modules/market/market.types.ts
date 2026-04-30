@@ -25,14 +25,23 @@ export interface CurrentPriceDTO {
   price: number;
 }
 
+export interface MarketSymbolDTO {
+  symbol: string;
+  baseAsset: string;
+  quoteAsset: string;
+  status: string;
+}
+
 export interface GetCandlesParams {
   symbol: string;
   timeframe: Timeframe;
   limit?: number;
+  endTime?: number;
 }
 
 export interface MarketQuery {
   symbol?: string;
   timeframe?: Timeframe;
   limit?: string;
+  endTime?: string;
 }
