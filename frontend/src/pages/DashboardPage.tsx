@@ -25,30 +25,255 @@ export default function DashboardPage() {
     return candles[candles.length - 1].close;
   }, [candles]);
 
-  return (
-    <div style={{ padding: "24px" }}>
-      <h1 style={{ marginBottom: "20px" }}>Trading Dashboard</h1>
+  const latestCandle = useMemo(() => {
+    if (!candles.length) return null;
+    return candles[candles.length - 1];
+  }, [candles]);
 
+  const chartInfoItems = useMemo(
+    () => [
+      {
+        label: "Symbol",
+        value: symbol,
+      },
+      {
+        label: "TF",
+        value: timeframe,
+      },
+      {
+        label: "Price",
+        value: currentPrice ? currentPrice.price.toLocaleString() : "--",
+      },
+      {
+        label: "Close",
+        value: lastClose !== null ? lastClose.toLocaleString() : "--",
+      },
+      {
+        label: "Candles",
+        value: `${candles.length}/${maxCandles}`,
+      },
+    ],
+    [symbol, timeframe, currentPrice, lastClose, candles.length, maxCandles]
+  );
+
+  const renderDynamicDataPanel = () => {
+    return (
       <div
         style={{
+          height: "100%",
           display: "flex",
-          gap: "12px",
-          alignItems: "center",
-          marginBottom: "20px",
-          flexWrap: "wrap",
+          flexDirection: "column",
+          gap: 12,
         }}
       >
-        <div>
-          <label>Symbol </label>
-          <SymbolSearch selectedSymbol={symbol} onSelectSymbol={setSymbol} />
+        <div
+          style={{
+            border: "1px solid #e5e7eb",
+            borderRadius: 12,
+            padding: 14,
+            background: "#fff",
+          }}
+        >
+          <h3 style={{ margin: 0, marginBottom: 8, fontSize: 16 }}>
+            Dynamic Data
+          </h3>
+
+          <p
+            style={{
+              margin: 0,
+              color: "#6b7280",
+              fontSize: 13,
+              lineHeight: 1.5,
+            }}
+          >
+            Khu vực này tạm thời để trống. Sau này sẽ dùng để hiển thị order,
+            position, trade history hoặc thông tin drawing đang được chọn.
+          </p>
         </div>
 
-        <div>
-          <label htmlFor="timeframe-select">Timeframe </label>
+        <div
+          style={{
+            border: "1px solid #e5e7eb",
+            borderRadius: 12,
+            padding: 14,
+            background: "#fff",
+            flex: 1,
+            minHeight: 260,
+          }}
+        >
+          <p style={{ margin: 0, color: "#9ca3af", fontSize: 13 }}>
+            No dynamic table data yet.
+          </p>
+
+          <div
+            style={{
+              marginTop: 14,
+              border: "1px dashed #d1d5db",
+              borderRadius: 10,
+              height: 170,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#9ca3af",
+              fontSize: 13,
+            }}
+          >
+            Placeholder table area
+          </div>
+        </div>
+
+        <div
+          style={{
+            border: "1px solid #e5e7eb",
+            borderRadius: 12,
+            padding: 14,
+            background: "#fff",
+          }}
+        >
+          <h4 style={{ margin: 0, marginBottom: 10, fontSize: 15 }}>
+            Latest Candle
+          </h4>
+
+          {latestCandle ? (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 7,
+                fontSize: 13,
+              }}
+            >
+              <span style={{ color: "#6b7280" }}>Open</span>
+              <strong>{latestCandle.open.toLocaleString()}</strong>
+
+              <span style={{ color: "#6b7280" }}>High</span>
+              <strong>{latestCandle.high.toLocaleString()}</strong>
+
+              <span style={{ color: "#6b7280" }}>Low</span>
+              <strong>{latestCandle.low.toLocaleString()}</strong>
+
+              <span style={{ color: "#6b7280" }}>Close</span>
+              <strong>{latestCandle.close.toLocaleString()}</strong>
+
+              <span style={{ color: "#6b7280" }}>Volume</span>
+              <strong>{latestCandle.volume.toLocaleString()}</strong>
+            </div>
+          ) : (
+            <p style={{ margin: 0, color: "#9ca3af", fontSize: 13 }}>
+              No candle loaded.
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#f8fafc",
+      }}
+    >
+      {/* Top bar nhỏ giống TradingView */}
+      <header
+        style={{
+          height: 52,
+          padding: "0 18px",
+          background: "#ffffff",
+          borderBottom: "1px solid #e5e7eb",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 16,
+          position: "sticky",
+          top: 0,
+          zIndex: 50,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 14,
+            minWidth: 0,
+          }}
+        >
+          <h1
+            style={{
+              margin: 0,
+              fontSize: 18,
+              fontWeight: 800,
+              whiteSpace: "nowrap",
+            }}
+          >
+            Trading Dashboard
+          </h1>
+
+          <div
+            style={{
+              width: 1,
+              height: 22,
+              background: "#e5e7eb",
+            }}
+          />
+
+          <div
+            style={{
+              fontSize: 13,
+              color: "#374151",
+              whiteSpace: "nowrap",
+            }}
+          >
+            <strong>{symbol}</strong>
+            <span style={{ color: "#9ca3af" }}> / </span>
+            <strong>{timeframe}</strong>
+          </div>
+
+          {loading && (
+            <span style={{ fontSize: 12, color: "#6b7280" }}>Loading...</span>
+          )}
+
+          {loadingMore && (
+            <span style={{ fontSize: 12, color: "#6b7280" }}>
+              Loading more...
+            </span>
+          )}
+
+          {error && (
+            <span style={{ fontSize: 12, color: "#f23645" }}>{error}</span>
+          )}
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            alignItems: "center",
+            flexShrink: 0,
+          }}
+        >
+          <div
+            style={{
+              width: 130,
+            }}
+          >
+            <SymbolSearch selectedSymbol={symbol} onSelectSymbol={setSymbol} />
+          </div>
+
           <select
-            id="timeframe-select"
             value={timeframe}
             onChange={(e) => setTimeframe(e.target.value)}
+            style={{
+              height: 30,
+              minWidth: 68,
+              border: "1px solid #d1d5db",
+              borderRadius: 7,
+              padding: "0 8px",
+              background: "#fff",
+              fontSize: 13,
+              fontWeight: 600,
+            }}
           >
             {timeframes.map((item) => (
               <option key={item} value={item}>
@@ -56,97 +281,120 @@ export default function DashboardPage() {
               </option>
             ))}
           </select>
+
+          <button
+            onClick={() => void refetch()}
+            style={{
+              height: 30,
+              border: "1px solid #111827",
+              borderRadius: 7,
+              background: "#111827",
+              color: "#fff",
+              padding: "0 12px",
+              cursor: "pointer",
+              fontSize: 13,
+              fontWeight: 700,
+            }}
+          >
+            Refresh
+          </button>
         </div>
+      </header>
 
-        <button onClick={() => void refetch()}>Refresh</button>
-      </div>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: "16px",
-          marginBottom: "24px",
-        }}
-      >
+      <main style={{ padding: 16 }}>
         <div
           style={{
-            border: "1px solid #e5e7eb",
-            borderRadius: "12px",
-            padding: "16px",
-            background: "#fff",
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 4fr) minmax(280px, 2fr)",
+            gap: 14,
+            alignItems: "stretch",
           }}
         >
-          <p style={{ margin: 0, color: "#6b7280" }}>Selected Symbol</p>
-          <h2 style={{ marginTop: "8px" }}>{symbol}</h2>
+          {/* Chart left 4 phần */}
+          <section
+            style={{
+              border: "1px solid #e5e7eb",
+              borderRadius: 14,
+              background: "#fff",
+              minWidth: 0,
+              overflow: "visible",
+            }}
+          >
+            <div
+              style={{
+                height: 42,
+                padding: "0 14px",
+                borderBottom: "1px solid #e5e7eb",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 12,
+              }}
+            >
+              <h3
+                style={{
+                  margin: 0,
+                  fontSize: 15,
+                  fontWeight: 800,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Candlestick Chart - {symbol} / {timeframe}
+              </h3>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: 12,
+                  alignItems: "center",
+                  overflow: "hidden",
+                }}
+              >
+                {chartInfoItems.map((item) => (
+                  <div
+                    key={item.label}
+                    style={{
+                      minWidth: "fit-content",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 10,
+                        color: "#6b7280",
+                        lineHeight: 1.1,
+                      }}
+                    >
+                      {item.label}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 800,
+                        color: "#111827",
+                        lineHeight: 1.1,
+                      }}
+                    >
+                      {item.value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ padding: 0 }}>
+              <CandleChart
+                data={candles}
+                symbol={symbol}
+                timeframe={timeframe}
+                onLoadMore={loadMoreCandles}
+              />
+            </div>
+          </section>
+
+          {/* Right 2 phần */}
+          <aside style={{ minWidth: 0 }}>{renderDynamicDataPanel()}</aside>
         </div>
-
-        <div
-          style={{
-            border: "1px solid #e5e7eb",
-            borderRadius: "12px",
-            padding: "16px",
-            background: "#fff",
-          }}
-        >
-          <p style={{ margin: 0, color: "#6b7280" }}>Current Price</p>
-          <h2 style={{ marginTop: "8px" }}>
-            {currentPrice ? currentPrice.price.toLocaleString() : "--"}
-          </h2>
-        </div>
-
-        <div
-          style={{
-            border: "1px solid #e5e7eb",
-            borderRadius: "12px",
-            padding: "16px",
-            background: "#fff",
-          }}
-        >
-          <p style={{ margin: 0, color: "#6b7280" }}>Last Close</p>
-          <h2 style={{ marginTop: "8px" }}>
-            {lastClose !== null ? lastClose.toLocaleString() : "--"}
-          </h2>
-        </div>
-
-        <div
-          style={{
-            border: "1px solid #e5e7eb",
-            borderRadius: "12px",
-            padding: "16px",
-            background: "#fff",
-          }}
-        >
-          <p style={{ margin: 0, color: "#6b7280" }}>Candles Loaded</p>
-          <h2 style={{ marginTop: "8px" }}>
-            {candles.length}/{maxCandles}
-          </h2>
-        </div>
-      </div>
-
-      {loading && <p>Loading market data...</p>}
-      {loadingMore && <p>Loading older candles...</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
-
-      <div
-        style={{
-          border: "1px solid #e5e7eb",
-          borderRadius: "12px",
-          padding: "16px",
-          background: "#fff",
-        }}
-      >
-        <h3 style={{ marginTop: 0, marginBottom: "16px" }}>
-          Candlestick Chart - {symbol} / {timeframe}
-        </h3>
-
-        <CandleChart
-          data={candles}
-          symbol={symbol}
-          timeframe={timeframe}
-          onLoadMore={loadMoreCandles}
-        />
-      </div>
+      </main>
     </div>
   );
 }

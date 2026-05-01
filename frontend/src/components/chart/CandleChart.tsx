@@ -456,7 +456,7 @@ export default function CandleChart({
 
     const chart = createChart(container, {
       width: container.clientWidth,
-      height: 460,
+      height: 560,
       layout: {
         background: { color: "#ffffff" },
         textColor: "#111827",
@@ -568,8 +568,8 @@ export default function CandleChart({
     const handleResize = () => {
       chart.applyOptions({
         width: container.clientWidth,
+        height: container.clientHeight,
       });
-
       setRenderVersion((prev) => prev + 1);
     };
 
@@ -1027,115 +1027,184 @@ export default function CandleChart({
   }, [drawings, renderVersion]);
 
   return (
-    <div>
-      <div
+  <div
+    style={{
+      position: "relative",
+      minHeight: 560,
+      background: "#ffffff",
+    }}
+  >
+    {/* Tool sidebar rời khỏi vùng nến, giống TradingView */}
+    <aside
+      style={{
+        position: "absolute",
+        left: 0,
+        top: 0,
+        bottom: 0,
+        width: 46,
+        zIndex: 30,
+        background: "#ffffff",
+        borderRight: "1px solid #e5e7eb",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        padding: "8px 5px",
+        gap: 7,
+      }}
+    >
+      <button
+        type="button"
+        title="Cursor"
+        onClick={() => {
+          setSelectedTool("cursor");
+          setPendingPoints([]);
+          setNoteColorPicker(null);
+          setEditingNote(null);
+        }}
         style={{
-          display: "flex",
-          gap: 8,
-          marginBottom: 12,
-          alignItems: "center",
-          flexWrap: "wrap",
+          width: 34,
+          height: 34,
+          border: "1px solid #d1d5db",
+          borderRadius: 8,
+          background: selectedTool === "cursor" ? "#111827" : "#fff",
+          color: selectedTool === "cursor" ? "#fff" : "#111827",
+          cursor: "pointer",
+          fontSize: 9,
+          fontWeight: 800,
         }}
       >
-        {(["cursor", "trendline", "noteLine"] as DrawingTool[]).map((tool) => (
-          <button
-            key={tool}
-            type="button"
-            onClick={() => {
-              setSelectedTool(tool);
-              setPendingPoints([]);
-              setNoteColorPicker(null);
-              setEditingNote(null);
-            }}
-            style={{
-              padding: "6px 10px",
-              border: "1px solid #d1d5db",
-              borderRadius: 6,
-              background: selectedTool === tool ? "#111827" : "#fff",
-              color: selectedTool === tool ? "#fff" : "#111827",
-              cursor: "pointer",
-            }}
-          >
-            {tool === "cursor" && "Cursor"}
-            {tool === "trendline" && "Trendline"}
-            {tool === "noteLine" && "Note Line"}
-          </button>
-        ))}
+        Cur
+      </button>
 
-        <select
-          value={
-            selectedTool === "longPosition" || selectedTool === "shortPosition"
-              ? selectedTool
-              : ""
-          }
-          onChange={(event) => {
-            const value = event.target.value as DrawingTool | "";
-
-            if (!value) return;
-
-            setSelectedTool(value);
-            setPendingPoints([]);
-            setNoteColorPicker(null);
-            setEditingNote(null);
-          }}
-          style={{
-            padding: "6px 10px",
-            border: "1px solid #d1d5db",
-            borderRadius: 6,
-            background:
-              selectedTool === "longPosition" ||
-                selectedTool === "shortPosition"
-                ? "#111827"
-                : "#fff",
-            color:
-              selectedTool === "longPosition" ||
-                selectedTool === "shortPosition"
-                ? "#fff"
-                : "#111827",
-            cursor: "pointer",
-          }}
-        >
-          <option value="">TP/SL</option>
-          <option value="longPosition">Long TP/SL</option>
-          <option value="shortPosition">Short TP/SL</option>
-        </select>
-
-        <button
-          type="button"
-          onClick={clearDrawings}
-          style={{
-            padding: "6px 10px",
-            border: "1px solid #ef4444",
-            borderRadius: 6,
-            background: "#fff",
-            color: "#ef4444",
-            cursor: "pointer",
-          }}
-        >
-          Clear
-        </button>
-
-        <span style={{ color: "#6b7280", fontSize: 13 }}>
-          {selectedTool === "trendline" &&
-            `Trendline: click 2 điểm (${pendingPoints.length}/2)`}
-          {selectedTool === "noteLine" &&
-            "Note Line: click để tạo, double click chữ để sửa, double click đường để đổi màu"}
-          {selectedTool === "longPosition" && "Long TP/SL: click 1 lần để tạo"}
-          {selectedTool === "shortPosition" &&
-            "Short TP/SL: click 1 lần để tạo"}
-        </span>
-      </div>
-
-      <div
-        ref={containerRef}
-        onClick={handleChartClick}
+      <button
+        type="button"
+        title="Trendline"
+        onClick={() => {
+          setSelectedTool("trendline");
+          setPendingPoints([]);
+          setNoteColorPicker(null);
+          setEditingNote(null);
+        }}
         style={{
-          width: "100%",
-          minHeight: 460,
-          cursor: "crosshair",
-          position: "relative",
+          width: 34,
+          height: 34,
+          border: "1px solid #d1d5db",
+          borderRadius: 8,
+          background: selectedTool === "trendline" ? "#111827" : "#fff",
+          color: selectedTool === "trendline" ? "#fff" : "#111827",
+          cursor: "pointer",
+          fontSize: 9,
+          fontWeight: 800,
         }}
       >
+        Tr
+      </button>
+
+      <button
+        type="button"
+        title="Note Line"
+        onClick={() => {
+          setSelectedTool("noteLine");
+          setPendingPoints([]);
+          setNoteColorPicker(null);
+          setEditingNote(null);
+        }}
+        style={{
+          width: 34,
+          height: 34,
+          border: "1px solid #d1d5db",
+          borderRadius: 8,
+          background: selectedTool === "noteLine" ? "#111827" : "#fff",
+          color: selectedTool === "noteLine" ? "#fff" : "#111827",
+          cursor: "pointer",
+          fontSize: 9,
+          fontWeight: 800,
+        }}
+      >
+        Nt
+      </button>
+
+      <button
+        type="button"
+        title="Long TP/SL"
+        onClick={() => {
+          setSelectedTool("longPosition");
+          setPendingPoints([]);
+          setNoteColorPicker(null);
+          setEditingNote(null);
+        }}
+        style={{
+          width: 34,
+          height: 34,
+          border: "1px solid #d1d5db",
+          borderRadius: 8,
+          background: selectedTool === "longPosition" ? "#089981" : "#fff",
+          color: selectedTool === "longPosition" ? "#fff" : "#111827",
+          cursor: "pointer",
+          fontSize: 9,
+          fontWeight: 800,
+        }}
+      >
+        L
+      </button>
+
+      <button
+        type="button"
+        title="Short TP/SL"
+        onClick={() => {
+          setSelectedTool("shortPosition");
+          setPendingPoints([]);
+          setNoteColorPicker(null);
+          setEditingNote(null);
+        }}
+        style={{
+          width: 34,
+          height: 34,
+          border: "1px solid #d1d5db",
+          borderRadius: 8,
+          background: selectedTool === "shortPosition" ? "#f23645" : "#fff",
+          color: selectedTool === "shortPosition" ? "#fff" : "#111827",
+          cursor: "pointer",
+          fontSize: 9,
+          fontWeight: 800,
+        }}
+      >
+        S
+      </button>
+
+      <button
+        type="button"
+        title="Clear drawings"
+        onClick={clearDrawings}
+        style={{
+          width: 34,
+          height: 34,
+          border: "1px solid #f23645",
+          borderRadius: 8,
+          background: "#fff",
+          color: "#f23645",
+          cursor: "pointer",
+          fontSize: 8,
+          fontWeight: 800,
+          marginTop: "auto",
+        }}
+      >
+        Clr
+      </button>
+    </aside>
+
+    <div
+      ref={containerRef}
+      onClick={handleChartClick}
+      style={{
+        width: "100%",
+        minHeight: 560,
+        cursor: "crosshair",
+        position: "relative",
+        paddingLeft: 46,
+        boxSizing: "border-box",
+      }}
+    >
         <svg
           style={{
             position: "absolute",
