@@ -62,8 +62,14 @@ type PositionDrawing = {
   slPrice: number;
 
   qty: number;
+
+  accountSize: number;
+  riskAmount: number;
+
   tickSize: number;
   tickValue: number;
+  pointValue: number;
+  lotSize: number;
 };
 
 type Drawing = TrendLineDrawing | NoteLineDrawing | PositionDrawing;
@@ -218,19 +224,42 @@ const createDefaultPosition = (
   const duration = timeframeToSeconds(tf) * 60;
   const isLong = side === "long";
 
+  const entryPrice = point.price;
+  const tpPrice = isLong ? point.price + range : point.price - range;
+  const slPrice = isLong ? point.price - range : point.price + range;
+
+  const accountSize = 1000;
+  const riskAmount = 250;
+  const pointValue = 1;
+  const lotSize = 1;
+
+  const stopDistance = Math.abs(entryPrice - slPrice);
+  const qty =
+    stopDistance > 0
+      ? riskAmount / (stopDistance * pointValue * lotSize)
+      : 0;
+
   return {
     id: makeId(),
     type: "position",
     side,
+
     entryTime: point.time,
     endTime: clampTime(point.time + duration),
-    entryPrice: point.price,
-    tpPrice: isLong ? point.price + range : point.price - range,
-    slPrice: isLong ? point.price - range : point.price + range,
 
-    qty: 1,
+    entryPrice,
+    tpPrice,
+    slPrice,
+
+    qty,
+
+    accountSize,
+    riskAmount,
+
     tickSize: 0.01,
     tickValue: 0.01,
+    pointValue,
+    lotSize,
   };
 };
 const formatNumber = (value: number, digits = 2) => {
@@ -239,7 +268,14 @@ const formatNumber = (value: number, digits = 2) => {
     maximumFractionDigits: digits,
   }).format(value);
 };
+const formatQty = (value: number) => {
+  if (!Number.isFinite(value)) return "0";
 
+  return new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: value < 1 ? 3 : 2,
+  }).format(value);
+};
 const calculatePositionStats = (position: PositionDrawing) => {
   const isLong = position.side === "long";
 
@@ -251,30 +287,54 @@ const calculatePositionStats = (position: PositionDrawing) => {
     ? position.entryPrice - position.slPrice
     : position.slPrice - position.entryPrice;
 
-  const targetPercent = (targetMove / position.entryPrice) * 100;
-  const stopPercent = (stopMove / position.entryPrice) * 100;
+  const absTargetMove = Math.abs(targetMove);
+  const absStopMove = Math.abs(stopMove);
 
-  const targetTicks = Math.round(Math.abs(targetMove) / position.tickSize);
-  const stopTicks = Math.round(Math.abs(stopMove) / position.tickSize);
+  const targetPercent = (absTargetMove / position.entryPrice) * 100;
+  const stopPercent = (absStopMove / position.entryPrice) * 100;
 
-  const targetAmount = Math.abs(targetMove) * position.qty;
-  const stopAmount = Math.abs(stopMove) * position.qty;
+  const targetTicks = Math.round(absTargetMove / position.tickSize);
+  const stopTicks = Math.round(absStopMove / position.tickSize);
 
-  const riskReward =
-    stopAmount > 0 ? targetAmount / stopAmount : 0;
+  const qty =
+    absStopMove > 0
+      ? position.riskAmount /
+        (absStopMove * position.pointValue * position.lotSize)
+      : 0;
+
+  const targetProfit =
+    absTargetMove * qty * position.pointValue * position.lotSize;
+
+  const stopLoss =
+    absStopMove * qty * position.pointValue * position.lotSize;
+
+  const targetAmount = position.accountSize + targetProfit;
+  const stopAmount = position.accountSize - stopLoss;
+
+  const riskReward = stopLoss > 0 ? targetProfit / stopLoss : 0;
 
   return {
+    qty,
+
     targetMove,
     stopMove,
+
     targetPercent,
     stopPercent,
+
     targetTicks,
     stopTicks,
+
+    targetProfit,
+    stopLoss,
+
     targetAmount,
     stopAmount,
+
     riskReward,
   };
 };
+
 const calculateOpenPnl = (
   position: PositionDrawing,
   currentPrice: number
@@ -282,8 +342,8 @@ const calculateOpenPnl = (
   const isLong = position.side === "long";
 
   return isLong
-    ? (currentPrice - position.entryPrice) * position.qty
-    : (position.entryPrice - currentPrice) * position.qty;
+    ? currentPrice - position.entryPrice
+    : position.entryPrice - currentPrice;
 };
 export default function CandleChart({
   data,
@@ -1197,10 +1257,10 @@ export default function CandleChart({
 
             if (item.type === "position") {
               const handleSize = 10;
-              const handleX = item.left - handleSize / 2;
-              const endHandleX = item.right - handleSize / 2;
-              const isLong = item.side === "long";
-              const stats = calculatePositionStats(item);
+const handleX = item.left - handleSize / 2;
+const endHandleX = item.right - handleSize / 2;
+const isLong = item.side === "long";
+const stats = calculatePositionStats(item);
 
 const latestCandle = dataRef.current[dataRef.current.length - 1];
 const currentPrice = latestCandle?.close ?? item.entryPrice;
@@ -1208,21 +1268,21 @@ const openPnl = calculateOpenPnl(item, currentPrice);
 
 const openPnlText =
   openPnl >= 0
-    ? formatNumber(openPnl, 2)
-    : `-${formatNumber(Math.abs(openPnl), 2)}`;
+    ? formatNumber(openPnl, 0)
+    : `-${formatNumber(Math.abs(openPnl), 0)}`;
 
 const targetText = `Target: ${formatNumber(
   Math.abs(stats.targetMove),
-  2
-)} (${formatNumber(Math.abs(stats.targetPercent), 2)}%) ${stats.targetTicks.toLocaleString()}, Amount: ${formatNumber(
+  0
+)} (${formatNumber(Math.abs(stats.targetPercent), 3)}%) ${stats.targetTicks.toLocaleString()}, Amount: ${formatNumber(
   stats.targetAmount,
   2
 )}`;
 
 const stopText = `Stop: ${formatNumber(
   Math.abs(stats.stopMove),
-  2
-)} (${formatNumber(Math.abs(stats.stopPercent), 2)}%) ${stats.stopTicks.toLocaleString()}, Amount: ${formatNumber(
+  0
+)} (${formatNumber(Math.abs(stats.stopPercent), 3)}%) ${stats.stopTicks.toLocaleString()}, Amount: ${formatNumber(
   stats.stopAmount,
   2
 )}`;
@@ -1277,18 +1337,27 @@ const stopLabelColor = CHART_COLORS.red;
                             price: item.entryPrice,
                           },
                         original: {
-                          id: item.id,
-                          type: "position",
-                          side: item.side,
-                          entryTime: item.entryTime,
-                          endTime: item.endTime,
-                          entryPrice: item.entryPrice,
-                          tpPrice: item.tpPrice,
-                          slPrice: item.slPrice,
-                          qty: item.qty,
-                          tickSize: item.tickSize,
-                          tickValue: item.tickValue,
-                        },
+  id: item.id,
+  type: "position",
+  side: item.side,
+
+  entryTime: item.entryTime,
+  endTime: item.endTime,
+
+  entryPrice: item.entryPrice,
+  tpPrice: item.tpPrice,
+  slPrice: item.slPrice,
+
+  qty: item.qty,
+
+  accountSize: item.accountSize,
+  riskAmount: item.riskAmount,
+
+  tickSize: item.tickSize,
+  tickValue: item.tickValue,
+  pointValue: item.pointValue,
+  lotSize: item.lotSize,
+},
                       })
                     }
                   />
@@ -1310,19 +1379,28 @@ const stopLabelColor = CHART_COLORS.red;
                             time: item.entryTime,
                             price: item.entryPrice,
                           },
-                        original: {
-                          id: item.id,
-                          type: "position",
-                          side: item.side,
-                          entryTime: item.entryTime,
-                          endTime: item.endTime,
-                          entryPrice: item.entryPrice,
-                          tpPrice: item.tpPrice,
-                          slPrice: item.slPrice,
-                          qty: item.qty,
-                          tickSize: item.tickSize,
-                          tickValue: item.tickValue,
-                        },
+                       original: {
+  id: item.id,
+  type: "position",
+  side: item.side,
+
+  entryTime: item.entryTime,
+  endTime: item.endTime,
+
+  entryPrice: item.entryPrice,
+  tpPrice: item.tpPrice,
+  slPrice: item.slPrice,
+
+  qty: item.qty,
+
+  accountSize: item.accountSize,
+  riskAmount: item.riskAmount,
+
+  tickSize: item.tickSize,
+  tickValue: item.tickValue,
+  pointValue: item.pointValue,
+  lotSize: item.lotSize,
+},
                       })
                     }
                   />
@@ -1412,34 +1490,34 @@ const stopLabelColor = CHART_COLORS.red;
                   </g>
 
                   {/* Entry label */}
-                  <g style={{ pointerEvents: "none" }}>
-                    <rect
-                      x={entryLabelX}
-                      y={item.entryY - 34}
-                      width={entryLabelWidth}
-                      height={42}
-                      rx={4}
-                      fill={entryLabelColor}
-                    />
-                    <text
-  x={entryLabelX + 10}
-  y={item.entryY - 18}
-  fontSize={12}
-  fill="#ffffff"
-  fontWeight={700}
->
-  {`Open P&L: ${openPnlText}, Qty: ${item.qty}`}
-</text>
-<text
-  x={entryLabelX + 10}
-  y={item.entryY - 4}
-  fontSize={12}
-  fill="#ffffff"
-  fontWeight={700}
->
-  {`Risk/reward ratio: ${formatNumber(stats.riskReward, 2)}`}
-</text>
-                  </g>
+<g style={{ pointerEvents: "none" }}>
+  <rect
+    x={entryLabelX}
+    y={item.entryY - 34}
+    width={entryLabelWidth}
+    height={42}
+    rx={4}
+    fill={entryLabelColor}
+  />
+  <text
+    x={entryLabelX + 10}
+    y={item.entryY - 18}
+    fontSize={12}
+    fill="#ffffff"
+    fontWeight={700}
+  >
+    {`Open P&L: ${openPnlText}, Qty: ${formatQty(stats.qty)}`}
+  </text>
+  <text
+    x={entryLabelX + 10}
+    y={item.entryY - 4}
+    fontSize={12}
+    fill="#ffffff"
+    fontWeight={700}
+  >
+    {`Risk/reward ratio: ${formatNumber(stats.riskReward, 2)}`}
+  </text>
+</g>
 
                   {/* Stop label */}
                   <g style={{ pointerEvents: "none" }}>
