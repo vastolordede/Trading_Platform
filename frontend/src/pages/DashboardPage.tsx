@@ -170,11 +170,14 @@ export default function DashboardPage() {
 
   return (
     <div
-      style={{
-        minHeight: "100vh",
-        background: "#f8fafc",
-      }}
-    >
+  style={{
+    height: "100vh",
+    background: "#f8fafc",
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
+  }}
+>
       {/* Top bar nhỏ giống TradingView */}
       <header
         style={{
@@ -301,25 +304,36 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <main style={{ padding: 16 }}>
+      <main
+  style={{
+    flex: 1,
+    minHeight: 0,
+    padding: 0,
+    overflow: "hidden",
+  }}
+>
         <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "minmax(0, 4fr) minmax(280px, 2fr)",
-            gap: 14,
-            alignItems: "stretch",
-          }}
-        >
+  style={{
+    height: "100%",
+    minHeight: 0,
+    display: "grid",
+    gridTemplateColumns: "minmax(0, 1fr) 360px",
+    alignItems: "stretch",
+  }}
+>
           {/* Chart left 4 phần */}
           <section
-            style={{
-              border: "1px solid #e5e7eb",
-              borderRadius: 14,
-              background: "#fff",
-              minWidth: 0,
-              overflow: "visible",
-            }}
-          >
+  style={{
+    background: "#fff",
+    minWidth: 0,
+    minHeight: 0,
+    height: "100%",
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
+    borderRight: "1px solid #e5e7eb",
+  }}
+>
             <div
               style={{
                 height: 42,
@@ -381,18 +395,34 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div style={{ padding: 0 }}>
-              <CandleChart
-                data={candles}
-                symbol={symbol}
-                timeframe={timeframe}
-                onLoadMore={loadMoreCandles}
-              />
-            </div>
+            <div
+  style={{
+    flex: 1,
+    minHeight: 0,
+  }}
+>
+  <CandleChart
+    data={candles}
+    symbol={symbol}
+    timeframe={timeframe}
+    onLoadMore={loadMoreCandles}
+  />
+</div>
           </section>
 
           {/* Right 2 phần */}
-          <aside style={{ minWidth: 0 }}>{renderDynamicDataPanel()}</aside>
+          <aside
+  style={{
+    minWidth: 0,
+    minHeight: 0,
+    height: "100%",
+    padding: 12,
+    overflow: "auto",
+    background: "#f8fafc",
+  }}
+>
+  {renderDynamicDataPanel()}
+</aside>
         </div>
       </main>
     </div>

@@ -455,8 +455,8 @@ export default function CandleChart({
     const container = containerRef.current;
 
     const chart = createChart(container, {
-      width: container.clientWidth,
-      height: 560,
+     width: container.clientWidth,
+height: container.clientHeight || 560,
       layout: {
         background: { color: "#ffffff" },
         textColor: "#111827",
@@ -1029,20 +1029,18 @@ export default function CandleChart({
   return (
   <div
     style={{
-      position: "relative",
-      minHeight: 560,
+      height: "100%",
+      minHeight: 0,
       background: "#ffffff",
+      display: "flex",
+      overflow: "hidden",
     }}
   >
-    {/* Tool sidebar rời khỏi vùng nến, giống TradingView */}
+    {/* Tool sidebar tách riêng khỏi chart */}
     <aside
       style={{
-        position: "absolute",
-        left: 0,
-        top: 0,
-        bottom: 0,
-        width: 46,
-        zIndex: 30,
+        width: 52,
+        flexShrink: 0,
         background: "#ffffff",
         borderRight: "1px solid #e5e7eb",
         display: "flex",
@@ -1050,6 +1048,7 @@ export default function CandleChart({
         alignItems: "center",
         padding: "8px 5px",
         gap: 7,
+        zIndex: 30,
       }}
     >
       <button
@@ -1194,17 +1193,18 @@ export default function CandleChart({
     </aside>
 
     <div
-      ref={containerRef}
-      onClick={handleChartClick}
-      style={{
-        width: "100%",
-        minHeight: 560,
-        cursor: "crosshair",
-        position: "relative",
-        paddingLeft: 46,
-        boxSizing: "border-box",
-      }}
-    >
+  ref={containerRef}
+  onClick={handleChartClick}
+  style={{
+    flex: 1,
+    height: "100%",
+    minWidth: 0,
+    minHeight: 0,
+    cursor: "crosshair",
+    position: "relative",
+    overflow: "hidden",
+  }}
+>
         <svg
           style={{
             position: "absolute",
