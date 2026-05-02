@@ -12,6 +12,7 @@ import {
   Logical,
 } from "lightweight-charts";
 import { CandleResponseItem } from "../../api/market.api";
+import { TradingTheme } from "../../theme/tradingTheme";
 
 type LoadMoreMode = "normal" | "fast";
 
@@ -26,6 +27,7 @@ type Props = {
   data: CandleResponseItem[];
   symbol: string;
   timeframe: string;
+  theme: TradingTheme;
   onLoadMore?: (mode?: LoadMoreMode) => void;
 };
 
@@ -151,12 +153,7 @@ const NOTE_COLORS = [
   "#db2777",
 ];
 
-const CHART_COLORS = {
-  green: "#089981",
-  red: "#f23645",
-  volumeGreen: "#92d2cc",
-  volumeRed: "#f7a9a7",
-};
+
 
 const toTimestamp = (time: Time | null): UTCTimestamp | null => {
   if (time === null) return null;
@@ -299,7 +296,7 @@ const calculatePositionStats = (position: PositionDrawing) => {
   const qty =
     absStopMove > 0
       ? position.riskAmount /
-        (absStopMove * position.pointValue * position.lotSize)
+      (absStopMove * position.pointValue * position.lotSize)
       : 0;
 
   const targetProfit =
@@ -349,8 +346,18 @@ export default function CandleChart({
   data,
   symbol,
   timeframe,
+  theme,
   onLoadMore,
 }: Props) {
+  const CHART_COLORS = useMemo(
+    () => ({
+      green: theme.chart.candleGreen,
+      red: theme.chart.candleRed,
+      volumeGreen: theme.chart.volumeGreen,
+      volumeRed: theme.chart.volumeRed,
+    }),
+    [theme.mode]
+  );
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
@@ -455,25 +462,25 @@ export default function CandleChart({
     const container = containerRef.current;
 
     const chart = createChart(container, {
-     width: container.clientWidth,
-height: container.clientHeight || 560,
+      width: container.clientWidth,
+      height: container.clientHeight || 560,
       layout: {
-        background: { color: "#ffffff" },
-        textColor: "#111827",
+        background: { color: theme.chart.background },
+        textColor: theme.chart.textColor,
       },
       grid: {
-        vertLines: { color: "#f1f5f9" },
-        horzLines: { color: "#f1f5f9" },
+        vertLines: { color: theme.chart.gridLine },
+        horzLines: { color: theme.chart.gridLine },
       },
       rightPriceScale: {
-        borderColor: "#e5e7eb",
+        borderColor: theme.chart.border,
         scaleMargins: {
           top: 0.05,
           bottom: 0.25,
         },
       },
       timeScale: {
-        borderColor: "#e5e7eb",
+        borderColor: theme.chart.border,
         timeVisible: true,
         secondsVisible: false,
         rightOffset: 40,
@@ -488,14 +495,14 @@ height: container.clientHeight || 560,
           labelVisible: true,
           width: 1,
           style: LineStyle.LargeDashed,
-          color: "#6b7280",
+          color: theme.chart.crosshair,
         },
         horzLine: {
           visible: true,
           labelVisible: true,
           width: 1,
           style: LineStyle.LargeDashed,
-          color: "#6b7280",
+          color: theme.chart.crosshair,
         },
       },
       handleScroll: {
@@ -727,7 +734,7 @@ height: container.clientHeight || 560,
       candleSeriesRef.current = null;
       volumeSeriesRef.current = null;
     };
-  }, []);
+  }, [theme.mode]);
 
   useEffect(() => {
     if (!candleSeriesRef.current || !volumeSeriesRef.current) return;
@@ -741,12 +748,12 @@ height: container.clientHeight || 560,
     }));
 
     const volumeData = data.map((item) => ({
-  time: Math.floor(item.openTime / 1000) as UTCTimestamp,
-  value: item.volume,
-  color: item.close >= item.open
-    ? CHART_COLORS.volumeGreen
-    : CHART_COLORS.volumeRed,
-}));
+      time: Math.floor(item.openTime / 1000) as UTCTimestamp,
+      value: item.volume,
+      color: item.close >= item.open
+        ? CHART_COLORS.volumeGreen
+        : CHART_COLORS.volumeRed,
+    }));
 
     candleSeriesRef.current.setData(candleData);
     volumeSeriesRef.current.setData(volumeData);
@@ -763,7 +770,7 @@ height: container.clientHeight || 560,
     }
 
     setRenderVersion((prev) => prev + 1);
-  }, [data]);
+  }, [data, CHART_COLORS]);
 
   const handleChartClick = (event: React.MouseEvent<HTMLDivElement>) => {
     if (selectedTool === "cursor") return;
@@ -801,7 +808,7 @@ height: container.clientHeight || 560,
           type: "noteLine",
           price: point.price,
           note: "Note",
-          color: "#111827",
+          color: theme.drawing.noteDefault,
         },
       ]);
 
@@ -1027,184 +1034,210 @@ height: container.clientHeight || 560,
   }, [drawings, renderVersion]);
 
   return (
-  <div
-    style={{
-      height: "100%",
-      minHeight: 0,
-      background: "#ffffff",
-      display: "flex",
-      overflow: "hidden",
-    }}
-  >
-    {/* Tool sidebar tách riêng khỏi chart */}
-    <aside
+    <div
       style={{
-        width: 52,
-        flexShrink: 0,
-        background: "#ffffff",
-        borderRight: "1px solid #e5e7eb",
+        height: "100%",
+        minHeight: 0,
+        background: theme.app.panelBg,
         display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        padding: "8px 5px",
-        gap: 7,
-        zIndex: 30,
+        overflow: "hidden",
       }}
     >
-      <button
-        type="button"
-        title="Cursor"
-        onClick={() => {
-          setSelectedTool("cursor");
-          setPendingPoints([]);
-          setNoteColorPicker(null);
-          setEditingNote(null);
-        }}
+      {/* Tool sidebar tách riêng khỏi chart */}
+      <aside
         style={{
-          width: 34,
-          height: 34,
-          border: "1px solid #d1d5db",
-          borderRadius: 8,
-          background: selectedTool === "cursor" ? "#111827" : "#fff",
-          color: selectedTool === "cursor" ? "#fff" : "#111827",
-          cursor: "pointer",
-          fontSize: 9,
-          fontWeight: 800,
+          width: 52,
+          flexShrink: 0,
+          background: theme.app.toolbarBg,
+          borderRight: `1px solid ${theme.app.border}`,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          padding: "8px 5px",
+          gap: 7,
+          zIndex: 30,
         }}
       >
-        Cur
-      </button>
+        <button
+          type="button"
+          title="Cursor"
+          onClick={() => {
+            setSelectedTool("cursor");
+            setPendingPoints([]);
+            setNoteColorPicker(null);
+            setEditingNote(null);
+          }}
+          style={{
+            width: 34,
+            height: 34,
+            border: `1px solid ${theme.app.border}`,
+            borderRadius: 8,
+            background:
+              selectedTool === "cursor" ? theme.app.buttonActiveBg : theme.app.panelBg,
+            color:
+              selectedTool === "cursor" ? theme.app.textStrong : theme.app.text,
+            cursor: "pointer",
+            fontSize: 9,
+            fontWeight: 800,
+          }}
+        >
+          Cur
+        </button>
 
-      <button
-        type="button"
-        title="Trendline"
-        onClick={() => {
-          setSelectedTool("trendline");
-          setPendingPoints([]);
-          setNoteColorPicker(null);
-          setEditingNote(null);
-        }}
+        <button
+          type="button"
+          title="Trendline"
+          onClick={() => {
+            setSelectedTool("trendline");
+            setPendingPoints([]);
+            setNoteColorPicker(null);
+            setEditingNote(null);
+          }}
+          style={{
+            width: 34,
+            height: 34,
+            border: `1px solid ${theme.app.border}`,
+            borderRadius: 8,
+            background:
+              selectedTool === "trendline"
+                ? theme.app.buttonActiveBg
+                : theme.app.panelBg,
+            color:
+              selectedTool === "trendline"
+                ? theme.app.textStrong
+                : theme.app.text,
+            cursor: "pointer",
+            fontSize: 9,
+            fontWeight: 800,
+          }}
+        >
+          Tr
+        </button>
+
+        <button
+          type="button"
+          title="Note Line"
+          onClick={() => {
+            setSelectedTool("noteLine");
+            setPendingPoints([]);
+            setNoteColorPicker(null);
+            setEditingNote(null);
+          }}
+          style={{
+            width: 34,
+            height: 34,
+            border: `1px solid ${theme.app.border}`,
+            borderRadius: 8,
+            background:
+              selectedTool === "noteLine"
+                ? theme.app.buttonActiveBg
+                : theme.app.panelBg,
+            color:
+              selectedTool === "noteLine"
+                ? theme.app.textStrong
+                : theme.app.text,
+            cursor: "pointer",
+            fontSize: 9,
+            fontWeight: 800,
+          }}
+        >
+          Nt
+        </button>
+
+        <button
+          type="button"
+          title="Long TP/SL"
+          onClick={() => {
+            setSelectedTool("longPosition");
+            setPendingPoints([]);
+            setNoteColorPicker(null);
+            setEditingNote(null);
+          }}
+          style={{
+            width: 34,
+            height: 34,
+            border: `1px solid ${theme.app.border}`,
+            borderRadius: 8,
+            background:
+              selectedTool === "longPosition"
+                ? CHART_COLORS.green
+                : theme.app.panelBg,
+            color:
+              selectedTool === "longPosition"
+                ? theme.app.buttonText
+                : theme.app.text,
+            cursor: "pointer",
+            fontSize: 9,
+            fontWeight: 800,
+          }}
+        >
+          L
+        </button>
+
+        <button
+          type="button"
+          title="Short TP/SL"
+          onClick={() => {
+            setSelectedTool("shortPosition");
+            setPendingPoints([]);
+            setNoteColorPicker(null);
+            setEditingNote(null);
+          }}
+          style={{
+            width: 34,
+            height: 34,
+            border: `1px solid ${theme.app.border}`,
+            borderRadius: 8,
+            background:
+              selectedTool === "shortPosition"
+                ? CHART_COLORS.red
+                : theme.app.panelBg,
+            color:
+              selectedTool === "shortPosition"
+                ? theme.app.buttonText
+                : theme.app.text,
+            cursor: "pointer",
+            fontSize: 9,
+            fontWeight: 800,
+          }}
+        >
+          S
+        </button>
+
+        <button
+          type="button"
+          title="Clear drawings"
+          onClick={clearDrawings}
+          style={{
+            width: 34,
+            height: 34,
+            border: `1px solid ${CHART_COLORS.red}`,
+            borderRadius: 8,
+            background: theme.app.panelBg,
+            color: CHART_COLORS.red,
+            cursor: "pointer",
+            fontSize: 8,
+            fontWeight: 800,
+            marginTop: "auto",
+          }}
+        >
+          Clr
+        </button>
+      </aside>
+
+      <div
+        ref={containerRef}
+        onClick={handleChartClick}
         style={{
-          width: 34,
-          height: 34,
-          border: "1px solid #d1d5db",
-          borderRadius: 8,
-          background: selectedTool === "trendline" ? "#111827" : "#fff",
-          color: selectedTool === "trendline" ? "#fff" : "#111827",
-          cursor: "pointer",
-          fontSize: 9,
-          fontWeight: 800,
+          flex: 1,
+          height: "100%",
+          minWidth: 0,
+          minHeight: 0,
+          cursor: "crosshair",
+          position: "relative",
+          overflow: "hidden",
         }}
       >
-        Tr
-      </button>
-
-      <button
-        type="button"
-        title="Note Line"
-        onClick={() => {
-          setSelectedTool("noteLine");
-          setPendingPoints([]);
-          setNoteColorPicker(null);
-          setEditingNote(null);
-        }}
-        style={{
-          width: 34,
-          height: 34,
-          border: "1px solid #d1d5db",
-          borderRadius: 8,
-          background: selectedTool === "noteLine" ? "#111827" : "#fff",
-          color: selectedTool === "noteLine" ? "#fff" : "#111827",
-          cursor: "pointer",
-          fontSize: 9,
-          fontWeight: 800,
-        }}
-      >
-        Nt
-      </button>
-
-      <button
-        type="button"
-        title="Long TP/SL"
-        onClick={() => {
-          setSelectedTool("longPosition");
-          setPendingPoints([]);
-          setNoteColorPicker(null);
-          setEditingNote(null);
-        }}
-        style={{
-          width: 34,
-          height: 34,
-          border: "1px solid #d1d5db",
-          borderRadius: 8,
-          background: selectedTool === "longPosition" ? "#089981" : "#fff",
-          color: selectedTool === "longPosition" ? "#fff" : "#111827",
-          cursor: "pointer",
-          fontSize: 9,
-          fontWeight: 800,
-        }}
-      >
-        L
-      </button>
-
-      <button
-        type="button"
-        title="Short TP/SL"
-        onClick={() => {
-          setSelectedTool("shortPosition");
-          setPendingPoints([]);
-          setNoteColorPicker(null);
-          setEditingNote(null);
-        }}
-        style={{
-          width: 34,
-          height: 34,
-          border: "1px solid #d1d5db",
-          borderRadius: 8,
-          background: selectedTool === "shortPosition" ? "#f23645" : "#fff",
-          color: selectedTool === "shortPosition" ? "#fff" : "#111827",
-          cursor: "pointer",
-          fontSize: 9,
-          fontWeight: 800,
-        }}
-      >
-        S
-      </button>
-
-      <button
-        type="button"
-        title="Clear drawings"
-        onClick={clearDrawings}
-        style={{
-          width: 34,
-          height: 34,
-          border: "1px solid #f23645",
-          borderRadius: 8,
-          background: "#fff",
-          color: "#f23645",
-          cursor: "pointer",
-          fontSize: 8,
-          fontWeight: 800,
-          marginTop: "auto",
-        }}
-      >
-        Clr
-      </button>
-    </aside>
-
-    <div
-  ref={containerRef}
-  onClick={handleChartClick}
-  style={{
-    flex: 1,
-    height: "100%",
-    minWidth: 0,
-    minHeight: 0,
-    cursor: "crosshair",
-    position: "relative",
-    overflow: "hidden",
-  }}
->
         <svg
           style={{
             position: "absolute",
@@ -1224,7 +1257,7 @@ height: container.clientHeight || 560,
                     y1={item.y1}
                     x2={item.x2}
                     y2={item.y2}
-                    stroke="#2563eb"
+                    stroke={theme.drawing.trendline}
                     strokeWidth={2}
                     style={{ pointerEvents: "stroke", cursor: "grab" }}
                     onMouseDown={(event) =>
@@ -1244,8 +1277,8 @@ height: container.clientHeight || 560,
                     cx={item.x1}
                     cy={item.y1}
                     r={5}
-                    fill="#fff"
-                    stroke="#2563eb"
+                    fill={theme.drawing.handleBg}
+                    stroke={theme.drawing.trendline}
                     strokeWidth={2}
                     style={{ pointerEvents: "all", cursor: "grab" }}
                     onMouseDown={(event) =>
@@ -1261,8 +1294,8 @@ height: container.clientHeight || 560,
                     cx={item.x2}
                     cy={item.y2}
                     r={5}
-                    fill="#fff"
-                    stroke="#2563eb"
+                    fill={theme.drawing.handleBg}
+                    stroke={theme.drawing.trendline}
                     strokeWidth={2}
                     style={{ pointerEvents: "all", cursor: "grab" }}
                     onMouseDown={(event) =>
@@ -1326,39 +1359,39 @@ height: container.clientHeight || 560,
 
             if (item.type === "position") {
               const handleSize = 10;
-const handleX = item.left - handleSize / 2;
-const endHandleX = item.right - handleSize / 2;
-const isLong = item.side === "long";
-const stats = calculatePositionStats(item);
+              const handleX = item.left - handleSize / 2;
+              const endHandleX = item.right - handleSize / 2;
+              const isLong = item.side === "long";
+              const stats = calculatePositionStats(item);
 
-const latestCandle = dataRef.current[dataRef.current.length - 1];
-const currentPrice = latestCandle?.close ?? item.entryPrice;
-const openPnl = calculateOpenPnl(item, currentPrice);
+              const latestCandle = dataRef.current[dataRef.current.length - 1];
+              const currentPrice = latestCandle?.close ?? item.entryPrice;
+              const openPnl = calculateOpenPnl(item, currentPrice);
 
-const openPnlText =
-  openPnl >= 0
-    ? formatNumber(openPnl, 0)
-    : `-${formatNumber(Math.abs(openPnl), 0)}`;
+              const openPnlText =
+                openPnl >= 0
+                  ? formatNumber(openPnl, 0)
+                  : `-${formatNumber(Math.abs(openPnl), 0)}`;
 
-const targetText = `Target: ${formatNumber(
-  Math.abs(stats.targetMove),
-  0
-)} (${formatNumber(Math.abs(stats.targetPercent), 3)}%) ${stats.targetTicks.toLocaleString()}, Amount: ${formatNumber(
-  stats.targetAmount,
-  2
-)}`;
+              const targetText = `Target: ${formatNumber(
+                Math.abs(stats.targetMove),
+                0
+              )} (${formatNumber(Math.abs(stats.targetPercent), 3)}%) ${stats.targetTicks.toLocaleString()}, Amount: ${formatNumber(
+                stats.targetAmount,
+                2
+              )}`;
 
-const stopText = `Stop: ${formatNumber(
-  Math.abs(stats.stopMove),
-  0
-)} (${formatNumber(Math.abs(stats.stopPercent), 3)}%) ${stats.stopTicks.toLocaleString()}, Amount: ${formatNumber(
-  stats.stopAmount,
-  2
-)}`;
+              const stopText = `Stop: ${formatNumber(
+                Math.abs(stats.stopMove),
+                0
+              )} (${formatNumber(Math.abs(stats.stopPercent), 3)}%) ${stats.stopTicks.toLocaleString()}, Amount: ${formatNumber(
+                stats.stopAmount,
+                2
+              )}`;
 
-const targetLabelColor = CHART_COLORS.green;
-const entryLabelColor = openPnl >= 0 ? CHART_COLORS.green : CHART_COLORS.red;
-const stopLabelColor = CHART_COLORS.red;
+              const targetLabelColor = CHART_COLORS.green;
+              const entryLabelColor = openPnl >= 0 ? CHART_COLORS.green : CHART_COLORS.red;
+              const stopLabelColor = CHART_COLORS.red;
 
               const targetLabelWidth = Math.max(260, targetText.length * 7);
               const stopLabelWidth = Math.max(250, stopText.length * 7);
@@ -1393,7 +1426,7 @@ const stopLabelColor = CHART_COLORS.red;
                     y={item.profitTop}
                     width={item.zoneWidth}
                     height={item.profitBottom - item.profitTop}
-                    fill="rgba(16, 185, 129, 0.22)"
+                    fill={theme.drawing.positionLongFill}
                     stroke={CHART_COLORS.green}
                     style={{ pointerEvents: "all", cursor: "grab" }}
                     onMouseDown={(event) =>
@@ -1406,27 +1439,27 @@ const stopLabelColor = CHART_COLORS.red;
                             price: item.entryPrice,
                           },
                         original: {
-  id: item.id,
-  type: "position",
-  side: item.side,
+                          id: item.id,
+                          type: "position",
+                          side: item.side,
 
-  entryTime: item.entryTime,
-  endTime: item.endTime,
+                          entryTime: item.entryTime,
+                          endTime: item.endTime,
 
-  entryPrice: item.entryPrice,
-  tpPrice: item.tpPrice,
-  slPrice: item.slPrice,
+                          entryPrice: item.entryPrice,
+                          tpPrice: item.tpPrice,
+                          slPrice: item.slPrice,
 
-  qty: item.qty,
+                          qty: item.qty,
 
-  accountSize: item.accountSize,
-  riskAmount: item.riskAmount,
+                          accountSize: item.accountSize,
+                          riskAmount: item.riskAmount,
 
-  tickSize: item.tickSize,
-  tickValue: item.tickValue,
-  pointValue: item.pointValue,
-  lotSize: item.lotSize,
-},
+                          tickSize: item.tickSize,
+                          tickValue: item.tickValue,
+                          pointValue: item.pointValue,
+                          lotSize: item.lotSize,
+                        },
                       })
                     }
                   />
@@ -1436,7 +1469,7 @@ const stopLabelColor = CHART_COLORS.red;
                     y={item.lossTop}
                     width={item.zoneWidth}
                     height={item.lossBottom - item.lossTop}
-                    fill="rgba(239, 68, 68, 0.22)"
+                    fill={theme.drawing.positionShortFill}
                     stroke={CHART_COLORS.red}
                     style={{ pointerEvents: "all", cursor: "grab" }}
                     onMouseDown={(event) =>
@@ -1448,28 +1481,28 @@ const stopLabelColor = CHART_COLORS.red;
                             time: item.entryTime,
                             price: item.entryPrice,
                           },
-                       original: {
-  id: item.id,
-  type: "position",
-  side: item.side,
+                        original: {
+                          id: item.id,
+                          type: "position",
+                          side: item.side,
 
-  entryTime: item.entryTime,
-  endTime: item.endTime,
+                          entryTime: item.entryTime,
+                          endTime: item.endTime,
 
-  entryPrice: item.entryPrice,
-  tpPrice: item.tpPrice,
-  slPrice: item.slPrice,
+                          entryPrice: item.entryPrice,
+                          tpPrice: item.tpPrice,
+                          slPrice: item.slPrice,
 
-  qty: item.qty,
+                          qty: item.qty,
 
-  accountSize: item.accountSize,
-  riskAmount: item.riskAmount,
+                          accountSize: item.accountSize,
+                          riskAmount: item.riskAmount,
 
-  tickSize: item.tickSize,
-  tickValue: item.tickValue,
-  pointValue: item.pointValue,
-  lotSize: item.lotSize,
-},
+                          tickSize: item.tickSize,
+                          tickValue: item.tickValue,
+                          pointValue: item.pointValue,
+                          lotSize: item.lotSize,
+                        },
                       })
                     }
                   />
@@ -1479,7 +1512,7 @@ const stopLabelColor = CHART_COLORS.red;
                     y1={item.entryY}
                     x2={item.right}
                     y2={item.entryY}
-                    stroke="#111827"
+                    stroke={theme.app.textStrong}
                     strokeWidth={1.5}
                   />
 
@@ -1489,7 +1522,7 @@ const stopLabelColor = CHART_COLORS.red;
                     width={handleSize}
                     height={handleSize}
                     rx={2}
-                    fill="#fff"
+                    fill={theme.drawing.handleBg}
                     stroke={CHART_COLORS.green}
                     strokeWidth={2}
                     style={{ pointerEvents: "all", cursor: "ns-resize" }}
@@ -1507,7 +1540,7 @@ const stopLabelColor = CHART_COLORS.red;
                     width={handleSize}
                     height={handleSize}
                     rx={2}
-                    fill="#fff"
+                    fill={theme.drawing.handleBg}
                     stroke={CHART_COLORS.red}
                     strokeWidth={2}
                     style={{ pointerEvents: "all", cursor: "ns-resize" }}
@@ -1525,8 +1558,8 @@ const stopLabelColor = CHART_COLORS.red;
                     width={handleSize}
                     height={handleSize}
                     rx={2}
-                    fill="#fff"
-                    stroke="#2563eb"
+                    fill={theme.drawing.handleBg}
+                    stroke={theme.drawing.trendline}
                     strokeWidth={2}
                     style={{ pointerEvents: "all", cursor: "ew-resize" }}
                     onMouseDown={(event) =>
@@ -1551,7 +1584,7 @@ const stopLabelColor = CHART_COLORS.red;
                       x={targetLabelX + 8}
                       y={targetTextY}
                       fontSize={12}
-                      fill="#ffffff"
+                      fill={theme.drawing.labelText}
                       fontWeight={700}
                     >
                       {targetText}
@@ -1559,34 +1592,34 @@ const stopLabelColor = CHART_COLORS.red;
                   </g>
 
                   {/* Entry label */}
-<g style={{ pointerEvents: "none" }}>
-  <rect
-    x={entryLabelX}
-    y={item.entryY - 34}
-    width={entryLabelWidth}
-    height={42}
-    rx={4}
-    fill={entryLabelColor}
-  />
-  <text
-    x={entryLabelX + 10}
-    y={item.entryY - 18}
-    fontSize={12}
-    fill="#ffffff"
-    fontWeight={700}
-  >
-    {`Open P&L: ${openPnlText}, Qty: ${formatQty(stats.qty)}`}
-  </text>
-  <text
-    x={entryLabelX + 10}
-    y={item.entryY - 4}
-    fontSize={12}
-    fill="#ffffff"
-    fontWeight={700}
-  >
-    {`Risk/reward ratio: ${formatNumber(stats.riskReward, 2)}`}
-  </text>
-</g>
+                  <g style={{ pointerEvents: "none" }}>
+                    <rect
+                      x={entryLabelX}
+                      y={item.entryY - 34}
+                      width={entryLabelWidth}
+                      height={42}
+                      rx={4}
+                      fill={entryLabelColor}
+                    />
+                    <text
+                      x={entryLabelX + 10}
+                      y={item.entryY - 18}
+                      fontSize={12}
+                      fill={theme.drawing.labelText}
+                      fontWeight={700}
+                    >
+                      {`Open P&L: ${openPnlText}, Qty: ${formatQty(stats.qty)}`}
+                    </text>
+                    <text
+                      x={entryLabelX + 10}
+                      y={item.entryY - 4}
+                      fontSize={12}
+                      fill={theme.drawing.labelText}
+                      fontWeight={700}
+                    >
+                      {`Risk/reward ratio: ${formatNumber(stats.riskReward, 2)}`}
+                    </text>
+                  </g>
 
                   {/* Stop label */}
                   <g style={{ pointerEvents: "none" }}>
@@ -1602,7 +1635,7 @@ const stopLabelColor = CHART_COLORS.red;
                       x={stopLabelX + 8}
                       y={stopTextY}
                       fontSize={12}
-                      fill="#ffffff"
+                      fill={theme.drawing.labelText}
                       fontWeight={700}
                     >
                       {stopText}
@@ -1626,8 +1659,8 @@ const stopLabelColor = CHART_COLORS.red;
               display: "flex",
               gap: 6,
               padding: 8,
-              background: "#fff",
-              border: "1px solid #e5e7eb",
+              background: theme.app.cardBg,
+              border: `1px solid ${theme.app.border}`,
               borderRadius: 8,
               boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
             }}
@@ -1648,7 +1681,7 @@ const stopLabelColor = CHART_COLORS.red;
                   width: 22,
                   height: 22,
                   borderRadius: "50%",
-                  border: "1px solid #d1d5db",
+                  border: `1px solid ${theme.app.border}`,
                   background: color,
                   cursor: "pointer",
                 }}
@@ -1687,10 +1720,10 @@ const stopLabelColor = CHART_COLORS.red;
               width: editingNote.width,
               zIndex: 9998,
               padding: "3px 6px",
-              border: "1px solid #2563eb",
+              border: `1px solid ${theme.drawing.trendline}`,
               borderRadius: 4,
-              background: "#fff",
-              color: "#111827",
+              background: theme.app.inputBg,
+              color: theme.app.textStrong,
               fontSize: 13,
               fontWeight: 700,
               outline: "none",
